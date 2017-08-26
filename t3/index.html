@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<video id="received_video" autoplay></video>
+<video id="local_video" autoplay muted></video>
+
+<button id="connectButton" name="connectButton" class="buttonleft">
+    Connect
+</button>
+<button id="disconnectButton" name="disconnectButton" class="buttonright" disabled>
+    Disconnect
+</button>
+<button id="sendButton" name="sendButton" class="buttonleft">
+    Send
+</button>
+`
+<script src="http://localhost:8080/socket.io/socket.io.js"></script>
+<script src="./client.js"></script>
+</body>
+</html>
