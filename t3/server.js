@@ -7,11 +7,14 @@ var app = http.createServer(function (req, res) {
 
 var io = require('socket.io').listen(app);
 io.sockets.on('connection', function (socket){
-    socket.emit('hello', 'hello from io!');
+    //socket.emit('hello', 'hello from io!');
 
-    socket.on('message', function (message) {
-        console.log('Got message: ', message);
-        //socket.broadcast.send('message', message); // should be room only
-        socket.emit('message', message);
+    socket.on('message', function (...message) {
+        console.log('Got message');
+        console.log(...message);
+        //send to every client except which receive msg
+        socket.broadcast.send('message', message);
+        //socket.emit('message', message);
+
     });
 });

@@ -1,28 +1,92 @@
+
+var myPeerConnection = null;
+var micUse = false;
+var camUse = false;
+
+
 var socket = io.connect('http://localhost:8080');
+
 socket.on('connect',function (){
-    socket.on('message', function (data){
-        alert (data);
+    //handler for messages from server
+    socket.on('message', function (msg){
+        console.log('received msg: ' + msg);
+        if (msg.type === 'offer') {
+            myPeerConnection.setRemoteDescription(new RTCSessionDescription(msg),
+                function() {
+                    myPeerConnection.createAnswer(function(answer) {
+                        myPeerConnection.setLocalDescription(answer, function() {
+                            // send the answer to a server to be forwarded back to the caller (you)
+                            send(answer);
+                        }, function(error) { console.log(error) });
+                    }, function(error) { console.log(error) });
+                },
+                function(error) { console.log(error) }
+            );
+        }
+        else if (msg.type === 'answer') {
+            myPeerConnection.setRemoteDescription(new RTCSessionDescription(msg),
+                function(error) { console.log(error) });
+        }
+        else if (msg.type === 'candidate') {
+            var candidate = new RTCIceCandidate({sdpMLineIndex: msg.label, candidate: msg.candidate});
+            myPeerConnection.addIceCandidate(candidate);
+        }
     });
 
 });
-var myPeerConnection = null;
 
-var mediaConstraints = {
-    audio: true, // We want an audio track
-    video: true // ...and we want a video track
-};
+
+
 
 function start() {
+    var mediaConstraints = {
+        audio: micUse, // We want an audio track
+        video: camUse // ...and we want a video track
+    };
+
     navigator.mediaDevices.getUserMedia(mediaConstraints)
         .then(function (localStream) {
             document.getElementById("local_video").srcObject = localStream;
+            //create connection
             myPeerConnection = new RTCPeerConnection();
             myPeerConnection.addStream(localStream);
+            // handler for ice candidate from other side
+            myPeerConnection.onicecandidate = function (event) {
+                // event contains ice candidate, which describe the route which can be used in transfer data
+                if (event.candidate) {
+                    send({
+                        type: "candidate",
+                        label: event.candidate.sdpMLineIndex,
+                        id: event.candidate.sdpMid,
+                        candidate: event.candidate.candidate
+                    });
+                }
+            };
+
+            //create offer - creates offer message
+            myPeerConnection.createOffer(function(offer) {
+                //set local description
+                myPeerConnection.setLocalDescription(offer, function() {
+                    // send the offer to a server to be forwarded to the friend you're calling.
+                    send(offer);
+                }, function(error) { console.log(error) });
+            }, function(error) { console.log(error) });
         });
 }
-function send() {
-    socket.send('test');
+
+//send message to server
+function send(msg) {
+    socket.send('message', msg);
 }
+
+document.getElementById("cameraButton").addEventListener('click', function () {
+    camUse = true;
+});
+
+document.getElementById("microButton").addEventListener('click', function () {
+    micUse = true;
+});
+
 
 document.getElementById("connectButton").addEventListener('click', function () {
    start();
