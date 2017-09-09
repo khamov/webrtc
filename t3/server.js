@@ -13,7 +13,7 @@ io.sockets.on('connection', function (socket){
         console.log('Got message');
         console.log(...message);
         //send to every client except which receive msg
-        socket.broadcast.send('message', message);
+        socket.broadcast.emit('message', message);
         //socket.emit('message', message);
 
     });

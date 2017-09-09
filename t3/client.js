@@ -8,8 +8,9 @@ var socket = io.connect('http://localhost:8080');
 
 socket.on('connect',function (){
     //handler for messages from server
-    socket.on('message', function (msg){
-        console.log('received msg: ' + msg);
+    socket.on('message', function (args){
+        console.log('received msg: ' + args);
+        msg = args[0];
         if (msg.type === 'offer') {
             myPeerConnection.setRemoteDescription(new RTCSessionDescription(msg),
                 function() {
@@ -28,7 +29,8 @@ socket.on('connect',function (){
                 function(error) { console.log(error) });
         }
         else if (msg.type === 'candidate') {
-            var candidate = new RTCIceCandidate({sdpMLineIndex: msg.label, candidate: msg.candidate});
+            //var candidate = new RTCIceCandidate({sdpMLineIndex: msg.label, candidate: msg.candidate});
+            var candidate = new RTCIceCandidate(msg);
             myPeerConnection.addIceCandidate(candidate);
         }
     });
@@ -60,23 +62,28 @@ function start() {
                         id: event.candidate.sdpMid,
                         candidate: event.candidate.candidate
                     });
+/*
+                    sendToServer({
+                        type: "new-ice-candidate",
+                        target: targetUsername,
+                        candidate: event.candidate
+                    }
+                    */
                 }
             };
+            myPeerConnection.onaddstream = gotRemoteStream;
 
-            //create offer - creates offer message
-            myPeerConnection.createOffer(function(offer) {
-                //set local description
-                myPeerConnection.setLocalDescription(offer, function() {
-                    // send the offer to a server to be forwarded to the friend you're calling.
-                    send(offer);
-                }, function(error) { console.log(error) });
-            }, function(error) { console.log(error) });
         });
 }
 
 //send message to server
 function send(msg) {
-    socket.send('message', msg);
+    socket.emit('message', msg);
+}
+
+function gotRemoteStream(event){
+    //document.getElementById("remoteVideo").src = URL.createObjectURL(event.stream);
+    document.getElementById("remoteVideo").srcObject = event.stream;
 }
 
 document.getElementById("cameraButton").addEventListener('click', function () {
@@ -93,5 +100,13 @@ document.getElementById("connectButton").addEventListener('click', function () {
 });
 
 document.getElementById("sendButton").addEventListener('click', function () {
-    send();
+    //create offer - creates offer message
+    myPeerConnection.createOffer(function(offer) {
+        //set local description
+        myPeerConnection.setLocalDescription(offer, function() {
+            // send the offer to a server to be forwarded to the friend you're calling.
+            send(offer);
+        }, function(error) { console.log(error) });
+    }, function(error) { console.log(error) });
+
 });
